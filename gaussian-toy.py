@@ -36,6 +36,7 @@ params = dict(
     z_dim=256,
     x_dim=2,
     unrolling_steps=0,
+    regularizer_weight=0.5,
 )
 
 
@@ -111,12 +112,21 @@ step_dict = extract_step_dict(d_updates)
 d_gradient_norm_sq = tf.square(tf.global_norm(tf.gradients(V, disc_vars)))
 
 
-
 g_opt = Adam(lr=params['gen_learning_rate'], beta_1=params['beta1'], epsilon=params['epsilon'])
-g_updates = g_opt.get_updates(gen_vars, [], V +0.5*d_gradient_norm_sq)
+g_updates = g_opt.get_updates(gen_vars, [], V +params['regularizer_weight']*d_gradient_norm_sq)
 g_train_op = tf.group(*g_updates, name="g_train_op")
 
- 
+
+# Or alternatively:
+'''
+d_opt = tf.train.AdamOptimizer(params['disc_learning_rate'], beta1=params['beta1'], epsilon=params['epsilon'])
+g_opt = tf.train.AdamOptimizer(params['gen_learning_rate'], beta1=params['beta1'], epsilon=params['epsilon'])
+d_train_op = d_opt.minimize(-V, var_list=disc_vars)
+g_train_op = g_opt.minimize(V+params['regularizer_weight']*d_gradient_norm_sq, var_list=gen_vars)
+'''
+
+
+
 norm_d = tf.global_norm(tf.gradients(V, disc_vars))
 norm_g = tf.global_norm(tf.gradients(V, gen_vars))
  
